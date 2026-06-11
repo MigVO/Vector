@@ -1,5 +1,5 @@
 """
-simple package to manage 3D vectors
+Simple package to manage 3D vectors
 The purpose of it is purely pedagogical and shouldn't be used in production environment
 
 I want the following operations
@@ -21,7 +21,9 @@ TODO::
 """
 
 import math
-from typing import Union
+from collections.abc import Iterable
+from typing import List, Union, overload
+
 
 class Vector:
     """
@@ -45,52 +47,48 @@ class Vector:
     z : float (default None)
 
     """
-    def __init__(self, x : Union[int, float, list, tuple, set, "Vector"] = None,
-                 y : Union[int, float] = None,
-                 z : Union[int, float] = None) -> None :
 
-       vector = x
+    @overload
+    def __init__(self, items: List[float]) -> None:
+        if all(isinstance(item, (int, float)) for item in items) is False:
+            raise ValueError("Source vector cannot contain non-numeric values")
 
-       if isinstance(x, (int, float)) and isinstance(y, (int, float)) and isinstance(z, (int, float)):
-            vector = [x, y, z]
+    @overload
+    def __init__(self, x: float, y: float, z: float) -> None:
+        items = [x, y, z]
+        if all(isinstance(item, (int, float)) for item in items) is False:
+            raise ValueError("Source vector cannot contain non-numeric values")
 
-       if not isinstance(vector, (int, float)) and y is None and z is None:
-            try:
-                vector = list(vector)
-            except:
-                raise TypeError("Source must be vector-like")
+    def __init__(self, *args):
+        # Your existing logic here
+        if len(args) == 1 and isinstance(args[0], Iterable):
+            self.data = list(args[0])
+        elif len(args) == 3:
+            self.data = [float(x) for x in args]
+        else:
+            raise TypeError("Must provide either a list/tuple or three floats")
 
-
-       try:
-           (vector[0] - vector[1] - vector[2])
-
-       except:
-           raise TypeError("Source vector cannot contain non numeral values")
-
-       if isinstance(vector, Vector):
-           vector = vector.source
-
-       self.source = vector
-
+        if isinstance(args, Vector):
+            self.data = args.data
 
     @property
     def x(self):
-        return self.source[0]
+        return self.data[0]
 
     @property
     def y(self):
-        return self.source[1]
+        return self.data[1]
 
     @property
     def z(self):
-        return self.source[2]
+        return self.data[2]
 
     @property
     def magnitude(self):
         """
         the magnitude of the vector
         """
-        mag = sum([x**2 for x in self])**0.5
+        mag = sum([x**2 for x in self.data]) ** 0.5
         return mag
 
     @property
@@ -111,124 +109,95 @@ class Vector:
         if not isinstance(vector, Vector):
             vector = Vector(vector)
 
-        dist = sum([(x - y)**2 for x, y in zip(self, vector)])**2
+        dist = sum([(x - y) ** 2 for x, y in zip(self.data, vector.data)]) ** 2
 
         return dist
 
     def angle(self, vector) -> float:
         """
-        return the angle between two vectors
+        Returns the angle between two vectors
 
         Parameters:
             vector: Vector to compare against
         """
         if not isinstance(vector, Vector):
             vector = Vector(vector)
-            
+
         return self.dot(vector) / (self.magnitude * vector.magnitude)
-
-
 
     def dot(self, vector) -> float:
         """
-        returns the dot product of two vectors
+        Returns the dot product of two vectors
 
         Parameters:
             vector: Vector to compare against
         """
         if not isinstance(vector, Vector):
             vector = Vector(vector)
-
-        return sum([x*y for x, y in zip(self, vector)])
+        return sum([x * y for x, y in zip(self.data, vector.data)])
 
     def cross(self, vector):
         """
-        returns the cross product of two vectors
+        Returns the cross product of two vectors
         """
-        a1, a2, a3 = self
-        b1, b2, b3 = vector
-        return Vector([a2*b3 - a3*b2,
-                       a1*b3 - a3*b1,
-                       a1*b2 - a2*b1])
+        if not isinstance(vector, Vector):
+            vector = Vector(vector)
+        a1, a2, a3 = self.data
+        b1, b2, b3 = vector.data
+        return Vector([a2 * b3 - a3 * b2, a1 * b3 - a3 * b1, a1 * b2 - a2 * b1])
 
     def __getitem__(self, item):
         """
         This does some magic
         """
-        return self.source[item]
+        return self.data[item]
 
     def __setitem__(self, idx, value):
-        self.source[idx] = value
+        self[idx] = value
 
     def __repr__(self):
         return "Vector(%s, %s, %s)" % (self.x, self.y, self.z)
-    
+
     def __add__(self, other):
         """
         Define addition of vectors and forbid the addition with other objects
         """
-        try:
-            newvector = Vector(other)
-        except:
-            raise TypeError(
-                'Can only operate with vector-like sources')
-        finally:
-            suma = Vector(self.x + newvector.x,
-                          self.y + newvector.y,
-                          self.z + newvector.z)
-        
-        return suma 
+        newvector = Vector(other)
+        suma = Vector(self.x + newvector.x, self.y + newvector.y, self.z + newvector.z)
+        return suma
 
     def __sub__(self, other):
         """
         Define subtraction of vectors and forbid it with other objects
         """
-        try:
-            newvector = Vector(other)
-        except:
-            raise TypeError(
-                'Can only operate with vector-like sources')
-        finally:
-            sub = Vector(self.x - newvector.x,
-                         self.y - newvector.y,
-                         self.z - newvector.z)
-        
-        return sub 
-        
+        newvector = Vector(other)
+        sub = Vector(self.x - newvector.x, self.y - newvector.y, self.z - newvector.z)
+        return sub
 
     def __mul__(self, other):
         """
         Define what can be multiplied and what not
         """
         if not isinstance(other, (int, float)):
-            raise TypeError('Can only operate con scalars')
-            
-        return Vector(other*self.x,
-                      other*self.y,
-                      other*self.z)
-    
+            raise TypeError("Can only operate con scalars")
+
+        return Vector(other * self.x, other * self.y, other * self.z)
+
     def __rmul__(self, other):
         """
         Define what can be multiplied and what not
         """
         if not isinstance(other, (int, float)):
-            raise TypeError('Can only operate con scalars')
-            
-        return Vector(other*self.x,
-                      other*self.y,
-                      other*self.z)
-        
+            raise TypeError("Can only operate con scalars")
 
     def __truediv__(self, other):
         """
         Define what can be divided and what not
         """
         if not isinstance(other, (int, float)):
-            raise TypeError('Can only operate con scalars')
-            
-        return Vector(self.x/other,
-                      self.y/other,
-                      self.z/other)
+            raise TypeError("Can only operate con scalars")
+
+        return Vector(self.x / other, self.y / other, self.z / other)
 
     def __radd__(self, other):
 
@@ -239,27 +208,29 @@ class Vector:
 
     def __eq__(self, other) -> bool:
 
-        try:
-            newvector = Vector(other)
-        except:
-            raise TypeError(
-                'Can only operate with vector-like sources')
-
-        return self[0] == newvector[0] and self[1] == newvector[1] and self[2] == newvector[2]
+        newvector = Vector(other)
+        return (
+            self[0] == newvector[0]
+            and self[1] == newvector[1]
+            and self[2] == newvector[2]
+        )
 
     def __iter__(self):
-        for value in self.source:
+        for value in self.data:
             yield value
 
 
 """
 Utility functions to convert from and to polar coordinates
-Ideally the class Vector should be able to handle them natively 
+Ideally the class Vector should be able to handle them natively
 """
 
-def from_polar( r : Union[int, float, list, tuple, set, "Vector"] = None,
-                theta : Union[int, float] = None,
-                phi : Union[int, float] = None) -> "Vector" :
+
+def from_polar(
+    r: Union[int, float, list, tuple, set, "Vector"],
+    theta: Union[int, float],
+    phi: Union[int, float],
+) -> "Vector":
     """
     Convert from polar coordinates to cartesian coordinates
 
@@ -276,9 +247,11 @@ def from_polar( r : Union[int, float, list, tuple, set, "Vector"] = None,
     return Vector(x, y, z)
 
 
-def to_polar( x : Union[int, float, list, tuple, set, "Vector"] = None,
-              y : Union[int, float] = None,
-              z : Union[int, float] = None) -> list :
+def to_polar(
+    x: Union[int, float, list, tuple, set, "Vector"],
+    y: Union[int, float],
+    z: Union[int, float],
+) -> list:
 
     vector = Vector(x, y, z)
     r = vector.magnitude
@@ -286,4 +259,3 @@ def to_polar( x : Union[int, float, list, tuple, set, "Vector"] = None,
     phi = math.atan(vector.y / vector.x)
 
     return [r, theta, phi]
-
