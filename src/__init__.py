@@ -1,3 +1,3 @@
-from .vector import Vector, from_polar, to_polar
+from .vector import Vector
 
-
+__all__ = ["Vector"]

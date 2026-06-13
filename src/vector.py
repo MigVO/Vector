@@ -24,6 +24,7 @@ import math
 from collections.abc import Iterable
 from typing import List, Union, overload
 
+__all__ = ["Vector"]
 
 class Vector:
     """
@@ -50,26 +51,28 @@ class Vector:
 
     @overload
     def __init__(self, items: List[float]) -> None:
-        if all(isinstance(item, (int, float)) for item in items) is False:
-            raise ValueError("Source vector cannot contain non-numeric values")
-
+        if not all(isinstance(item, (int, float)) for item in items):
+            raise TypeError("Source vector cannot contain non-numeric values")
     @overload
     def __init__(self, x: float, y: float, z: float) -> None:
         items = [x, y, z]
-        if all(isinstance(item, (int, float)) for item in items) is False:
-            raise ValueError("Source vector cannot contain non-numeric values")
+
 
     def __init__(self, *args):
-        # Your existing logic here
-        if len(args) == 1 and isinstance(args[0], Iterable):
-            self.data = list(args[0])
+
+        if isinstance(args, Vector):
+            items= args.data
+        elif len(args) == 1 and isinstance(args[0], Iterable):
+            items = list(args[0])
         elif len(args) == 3:
-            self.data = [float(x) for x in args]
+            items = [float(x) for x in args]
         else:
             raise TypeError("Must provide either a list/tuple or three floats")
 
-        if isinstance(args, Vector):
-            self.data = args.data
+        if not all(isinstance(item, (int, float)) for item in items):
+            raise TypeError("Source vector cannot contain non-numeric values")
+
+        self.data = items
 
     @property
     def x(self):
@@ -144,7 +147,33 @@ class Vector:
             vector = Vector(vector)
         a1, a2, a3 = self.data
         b1, b2, b3 = vector.data
-        return Vector([a2 * b3 - a3 * b2, a1 * b3 - a3 * b1, a1 * b2 - a2 * b1])
+        return Vector([a2 * b3 - a3 * b2,
+                       a1 * b3 - a3 * b1,
+                       a1 * b2 - a2 * b1])
+
+    def to_polar(self) -> list:
+
+        r = self.magnitude
+        theta = math.acos(self.z / r)
+        phi = math.atan(self.y / self.x)
+
+        return [r, theta, phi]
+
+    @classmethod
+    def from_polar(cls, args) -> "Vector":
+        """
+        Convert from polar coordinates to cartesian coordinates
+        """
+        tmp_vector = cls(args)  # Should use a proper class for Polar vectors
+        r = tmp_vector.x
+        theta = tmp_vector.y
+        phi = tmp_vector.z
+
+        x = r * math.sin(theta) * math.cos(phi)
+        y = r * math.sin(theta) * math.sin(phi)
+        z = r * math.cos(theta)
+
+        return cls(x, y, z)
 
     def __getitem__(self, item):
         """
@@ -189,6 +218,7 @@ class Vector:
         """
         if not isinstance(other, (int, float)):
             raise TypeError("Can only operate con scalars")
+        return Vector(other * self.x, other * self.y, other * self.z)
 
     def __truediv__(self, other):
         """
@@ -209,53 +239,10 @@ class Vector:
     def __eq__(self, other) -> bool:
 
         newvector = Vector(other)
-        return (
-            self[0] == newvector[0]
-            and self[1] == newvector[1]
-            and self[2] == newvector[2]
-        )
+        return (self[0] == newvector[0] and
+                self[1] == newvector[1] and
+                self[2] == newvector[2])
 
     def __iter__(self):
         for value in self.data:
             yield value
-
-
-"""
-Utility functions to convert from and to polar coordinates
-Ideally the class Vector should be able to handle them natively
-"""
-
-
-def from_polar(
-    r: Union[int, float, list, tuple, set, "Vector"],
-    theta: Union[int, float],
-    phi: Union[int, float],
-) -> "Vector":
-    """
-    Convert from polar coordinates to cartesian coordinates
-
-    """
-    tmp_vector = Vector(r, theta, phi)  # Should use a proper class for Polar vectors
-    r = tmp_vector.x
-    theta = tmp_vector.y
-    phi = tmp_vector.z
-
-    x = r * math.sin(theta) * math.cos(phi)
-    y = r * math.sin(theta) * math.sin(phi)
-    z = r * math.cos(theta)
-
-    return Vector(x, y, z)
-
-
-def to_polar(
-    x: Union[int, float, list, tuple, set, "Vector"],
-    y: Union[int, float],
-    z: Union[int, float],
-) -> list:
-
-    vector = Vector(x, y, z)
-    r = vector.magnitude
-    theta = math.acos(vector.z / r)
-    phi = math.atan(vector.y / vector.x)
-
-    return [r, theta, phi]
